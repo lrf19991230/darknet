@@ -1,3 +1,22 @@
+# The change of this fork:
+### 2023.2.16： 修改了/src/detector.c文件，使得darknet可以批量测试图片并保存预测结果图片
+* **predictions图片的命名规则为: `原始名称_prediction.jpg`，保存位置为:**
+1、当输入单张图片的路径时，保存在darknet根目录下的`image_predictions/`文件夹下(如果没有此文件夹，将自动创建)
+2、当使用 `< xxx.txt` 输入测试图片的路径时，保存在测试图片文件夹中的`predictions/`文件夹下(此文件夹与原始图片处于同级目录，如果没有，将自动创建。)
+
+
+* **修改的具体部分为:**
+1、 `detector.c`的第1631行新加了`get_name(...)`函数，用于获取输入图像的文件名、文件夹路径等；
+2、第1688行的`test_detector(...)`函数中，第1731行、1750行、1762行、1832行加入了新的部分。
+
+* **具体指令例子为:**
+1、批量测试图片，并将结果保存到同一个txt中
+`./darknet detector test cfg/coco.data cfg/yolov4.cfg yolov4.weights -dont_show -ext_output < data/train.txt > result.txt`
+(`<`的含义(chatGPT解释的):`<`是shell命令中的输入重定向符号，它可以将一个文件的内容作为输入流输入到命令中。在这个命令中，`<`将文件`data/new_train.txt`的内容输入到 `./darknet detector test` 命令中，作为其输入流的内容。这样，`./darknet detector test` 命令就会读取`data/new_train.txt`文件中的数据，然后执行检测操作并输出结果。)
+2、批量测试图片，以yolo格式保存
+`./darknet detector test cfg/coco.data cfg/yolov4.cfg yolov4.weights -thresh 0.25 -dont_show -save_labels < data/new_train.txt`
+----
+
 # Yolo v4, v3 and v2 for Windows and Linux
 
 ## (neural networks for object detection)
