@@ -9,6 +9,11 @@
 #include "demo.h"
 #include "option_list.h"
 
+////////新加的头文件
+#include <unistd.h>
+#include <sys/stat.h>
+//////////////////////
+
 #ifndef __COMPAR_FN_T
 #define __COMPAR_FN_T
 typedef int (*__compar_fn_t)(const void*, const void*);
@@ -1623,6 +1628,63 @@ void calc_anchors(char *datacfg, int num_of_clusters, int width, int height, int
 }
 
 
+// 新加的函数，用于获取图片的文件名。输入为绝对路径，输出为提取出的文件名(可以包含后缀或者不包含后缀)
+char* get_name(char* path, int choice)
+{
+    static char pure_file_name[256],file_name[256],extension_name[256], path_without_name[256];
+
+    int i,j,flag = 0;
+    int len = strlen(path); //取字符串长度
+    ////////////////////////获取后缀名 //////////////////
+    for(i=len-1; i>=0; i--)
+        if(path[i] == '.'){  //找到最后一个点号
+            strcpy(extension_name,&path[i]);//获取后缀名，包含'.'
+
+            break;
+        }
+
+    /////////////////////获取文件名(不含路径,含后缀)； 获取不含文件名的纯路径////////////////////////
+    for(i=len-1; i>=0; i--)
+        if(path[i] == '/'){ //找到最后一个斜杠
+            strcpy(file_name,&path[i+1]);//获取文件名(不含路径,含后缀)
+
+            strncpy(path_without_name, path, i+1);  //获取不含文件名的路径，结尾含有'/'
+            path_without_name[i+1] = '\0';
+
+            break;
+        }
+    // printf("extension_name:%s\n",extension_name);
+    // printf("file_name:%s\n",file_name);
+
+    /////////////////////////获取纯文件名(不含路径和后缀)////////////////////////////////
+    for(i=len-1; i>=0; i--){
+        if(path[i] == '.' && !flag){
+            j = i; //记录最后一个点号位置
+            flag = 1;
+        }
+        if(path[i] == '/'){ //找到最后一个斜杠
+            strncpy(pure_file_name,path+i+1,j-i-1);//获取纯文件名(不含路径和后缀)
+            pure_file_name[j-i-1] = '\0';
+            break;
+        }
+    }    
+    // printf("pure_file_name:%s\n",pure_file_name);
+
+    switch(choice){
+        case 1:
+            return file_name;//文件名(不含路径,含后缀)
+        case 2:
+            return pure_file_name;//纯文件名(不含路径和后缀)
+        case 3:
+            return extension_name;//后缀
+        case 4:
+            return path_without_name; //路径(不含文件名，结尾含'/')
+        default:
+            return "choice error!";
+    }
+}
+// 新加的get_name函数结束
+
 void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filename, float thresh,
     float hier_thresh, int dont_show, int ext_output, int save_labels, char *outfile, int letter_box, int benchmark_layers)
 {
@@ -1661,6 +1723,16 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
     }
     int j;
     float nms = .45;    // 0.4F
+    
+    
+    
+    
+    // 指定单张图片的默认保存位置
+    char save_path[256] = "image_predictions/"; // 默认的(单张图片)输出保存位置
+    ////////////////////////
+    
+    
+    
     while (1) {
         if (filename) {
             strncpy(input, filename, 256);
@@ -1673,7 +1745,52 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
             input = fgets(input, 256, stdin);
             if (!input) break;
             strtok(input, "\n");
+
+
+            /////////////////新加的代码，多图片测试时，修改默认的保存路径，修改为图片原始文件夹下的predictions/文件夹
+            printf("\n");
+            char* pure_path = get_name(input, 4);  // 获取图片的路径文件夹(不含文件名，含'/')
+
+            strcpy(save_path, pure_path);         // 修改默认的save_path为图片的文件夹
+            strcat(save_path, "predictions/");  // 修改默认的save_path为图片原始文件夹下的predictions/文件夹
+            //////////////////////////////////////////
+            
+
+        
         }
+
+        
+        /////////////////新加的代码
+        // 获取输入图片的文件名(不含后缀)，与路径(要保存在的文件夹)拼接，用于替代原来输出的'predictions'
+        char save_path_image[256] =""; // 保存图片时的路径，不带后缀
+        strcpy(save_path_image, save_path);
+        
+        char* im_name = get_name(input, 2); // 图片的纯文件名，不含后缀
+
+        // char* im_extension_name = get_name(input, 3); //图片的后缀名，用于printf信息
+
+        strcat(save_path_image, im_name);  // 将path和文件名拼接
+        // strcat(save_path, im_name);  // 将path和文件名拼接
+        strcat(save_path_image, "_prediction");  // 将path和文件名拼接，无后缀
+
+        char saved_image_jpg[256], saved_image_png[256];   // 实际保存的图片可能为jpg或者png，用于判断图片是否成功保存
+        strcpy(saved_image_jpg, save_path_image);
+        strcat(saved_image_jpg, ".jpg");
+        strcpy(saved_image_png, save_path_image);
+        strcat(saved_image_png, ".png");
+
+        // char saved_prediction[256] = "";  //图片保存后的路径，带后缀，用于判断是否成功保存
+        // strcpy(saved_prediction, save_path_image);
+        // strcat(saved_prediction, im_extension_name); //图片保存后的绝对路径，带后缀
+
+        // printf("测试: %s \n", save_path); 
+        // printf("测试: %s \n",input);
+        //新加的代码结束
+    
+
+
+
+
         //image im;
         //image sized = load_image_resize(input, net.w, net.h, net.c, &im);
         image im = load_image(input, 0, 0, net.c);
@@ -1711,10 +1828,48 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
             else diounms_sort(dets, nboxes, l.classes, nms, l.nms_kind, l.beta_nms);
         }
         draw_detections_v3(im, dets, nboxes, thresh, names, alphabet, l.classes, ext_output);
-        save_image(im, "predictions");
+        
+
+        /////////////////修改的代码
+
+        // 判断保存路径是否存在,如果不存在，则创建该路径目录
+        if (access(save_path, F_OK) != 0) {
+            // 目录不存在，创建目录
+            if (mkdir(save_path, 0777) != 0) {
+                // 创建失败
+                perror("mkdir error, the save_path donot exist, please create the Directory first! \n");
+                exit(EXIT_FAILURE);
+            }
+            printf("Directory created successfully!\n");
+        } 
+        printf("--------------------------------------------------- \n");
+        printf("The save path Directory is \'%s\'. \n", save_path);
+        save_image(im, save_path_image);             //将名字从predictions改成了现在的样子
+    
+        if (access(saved_image_jpg, F_OK) == 0) {    //判断是否保存成功
+            // 如果.jpg文件存在
+            printf("The image prediction has been saved to \'%s\'. \n", saved_image_jpg);
+        } else if(access(saved_image_png, F_OK) == 0){
+            // 如果.png文件存在
+            printf("The image prediction has been saved to \'%s\'. \n", saved_image_png);
+            }else{
+                //  .jpg和.png都不存在
+                printf("The image prediction saving failed. \n");
+            }
+        printf("--------------------------------------------------- \n");
+        
+        if (!dont_show) {
+            show_image(im, save_path_image);
+        }
+        ////////////////
+
+
+        /*   这段是原来的代码
+        save_image(im, "predictions");  
         if (!dont_show) {
             show_image(im, "predictions");
         }
+        */
 
         if (json_file) {
             if (json_buf) {
